@@ -4,16 +4,12 @@ import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.scene.paint.Color;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.Button;
 
 public class Main extends Application {
     private WhiteboardClient client;
@@ -58,6 +54,7 @@ public class Main extends Application {
 
         ColorPicker colorPicker = new ColorPicker(currentColor);
 
+
         // Add event listener for color changes
         colorPicker.setOnAction(e -> {
             currentColor = colorPicker.getValue();
@@ -69,6 +66,11 @@ public class Main extends Application {
             gc.beginPath();
             gc.moveTo(e.getX(), e.getY());
             gc.stroke();
+            if(isEraserMode){
+                gc.setLineWidth(10.0);
+            } else {
+                gc.setLineWidth(1.0);
+            }
             sendDrawingData(e.getX(), e.getY(), "pressed", isEraserMode ? Color.WHITE : currentColor);
         });
 
@@ -77,6 +79,11 @@ public class Main extends Application {
             if (currentTime - lastDrawTime >= drawDelay) {
                 gc.lineTo(e.getX(), e.getY());
                 gc.stroke();
+                if(isEraserMode){
+                    gc.setLineWidth(10.0);
+                } else {
+                    gc.setLineWidth(1.0);
+                }
                 sendDrawingData(e.getX(), e.getY(), "dragged", isEraserMode ? Color.WHITE : currentColor);
                 lastDrawTime = currentTime;
             }
@@ -115,6 +122,12 @@ public class Main extends Application {
 
     public static void receiveDrawingData(String data) {
         String[] parts = data.split(",");
+        // Check if there are enough parts in the data to proceed
+        if (parts.length < 6) {
+            System.out.println("Received invalid data: " + data);
+            return;  // Exit early if data is not valid
+        }
+
         String action = parts[0];
         double x = Double.parseDouble(parts[1]);
         double y = Double.parseDouble(parts[2]);
