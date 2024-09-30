@@ -16,6 +16,7 @@ public class Main extends Application {
     private static GraphicsContext gc;
     private static Color currentColor = Color.BLACK;
     private boolean isEraserMode = false;
+    private boolean isHighlightMode = false;
     long lastDrawTime = 0;
     long drawDelay = 10;
 
@@ -63,29 +64,46 @@ public class Main extends Application {
 
         // Add event listeners for drawing
         canvas.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
-            gc.beginPath();
-            gc.moveTo(e.getX(), e.getY());
-            gc.stroke();
-            if(isEraserMode){
+            if (isHighlightMode) {
+                drawHighlight(e.getX(), e.getY());
+            } else if (isEraserMode){
+                gc.beginPath();
+                gc.moveTo(e.getX(), e.getY());
+                gc.stroke();
                 gc.setLineWidth(10.0);
-            } else {
+                sendDrawingData(e.getX(), e.getY(), "pressed", Color.WHITE);
+            }else {
+                gc.beginPath();
+                gc.moveTo(e.getX(), e.getY());
+                gc.stroke();
                 gc.setLineWidth(1.0);
+                sendDrawingData(e.getX(), e.getY(), "pressed", currentColor);
             }
-            sendDrawingData(e.getX(), e.getY(), "pressed", isEraserMode ? Color.WHITE : currentColor);
         });
 
         canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
-            long currentTime = System.currentTimeMillis();
-            if (currentTime - lastDrawTime >= drawDelay) {
-                gc.lineTo(e.getX(), e.getY());
-                gc.stroke();
-                if(isEraserMode){
+            if (isHighlightMode) {
+                drawHighlight(e.getX(), e.getY());
+            } else if (isEraserMode){
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastDrawTime >= drawDelay) {
+                    gc.lineTo(e.getX(), e.getY());
+                    gc.stroke();
                     gc.setLineWidth(10.0);
-                } else {
-                    gc.setLineWidth(1.0);
+                    sendDrawingData(e.getX(), e.getY(), "dragged", Color.WHITE);
+                    lastDrawTime = currentTime;
                 }
-                sendDrawingData(e.getX(), e.getY(), "dragged", isEraserMode ? Color.WHITE : currentColor);
-                lastDrawTime = currentTime;
+            } else {
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastDrawTime >= drawDelay) {
+                    gc.lineTo(e.getX(), e.getY());
+                    gc.stroke();
+                    gc.setLineWidth(1.0);
+                    sendDrawingData(e.getX(), e.getY(), "dragged", currentColor);
+                    lastDrawTime = currentTime;
+                }
+
+
             }
         });
 
@@ -99,6 +117,11 @@ public class Main extends Application {
             }
         });
 
+        ToggleButton highlightButton = new ToggleButton("Highlight");
+        highlightButton.setOnAction(e -> {
+            isHighlightMode = highlightButton.isSelected();
+        });
+
         // Pane to hold the canvas and color picker
         Pane root = new Pane();
         root.getChildren().addAll(canvas, colorPicker);
@@ -106,10 +129,20 @@ public class Main extends Application {
         eraserButton.setLayoutX(700);
         eraserButton.setLayoutY(20);
 
+        highlightButton.setLayoutX(600);
+        highlightButton.setLayoutY(20);
+        root.getChildren().add(highlightButton);
+
         Scene scene = new Scene(root, 800, 600);
         primaryStage.setTitle("Collaborative Whiteboard");
         primaryStage.setScene(scene);
         primaryStage.show();
+    }
+
+    private void drawHighlight(double x, double y) {
+        Color highlightColor = Color.YELLOW; // Change this to your desired highlight color
+        gc.setFill(highlightColor.deriveColor(0, 1, 1, 0.05)); // Semi-transparent color
+        gc.fillRect(x - 10, y - 10, 20, 20); // Draw a rectangle as the highlight
     }
 
     private void sendDrawingData(double x, double y, String action, Color color) {
