@@ -7,16 +7,17 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 public class WhiteboardServer {
     private static final int PORT = 12345;
-    private static Set<PrintWriter> clients = new CopyOnWriteArraySet<>();
+    private static Map<String, Set<PrintWriter>> groups = new HashMap<>();  // Map of PIN to a set of clients
     private static Set<String> validPins = new HashSet<>();  // Store valid PINs
 
     public static void main(String[] args) throws IOException {
         System.out.println("Server is running...");
         ServerSocket serverSocket = new ServerSocket(PORT);
 
-        // Example of adding valid PINs; you can customize this
-        validPins.add("1234");  // Add valid PINs here
-        validPins.add("5678");
+        // Example of adding valid PINs
+        validPins.add("1234");  // First group
+        validPins.add("5678");  // Second group
+        validPins.add("1278");  // third group
 
         while (true) {
             new ClientHandler(serverSocket.accept()).start();
@@ -35,7 +36,6 @@ public class WhiteboardServer {
         public void run() {
             try {
                 out = new PrintWriter(socket.getOutputStream(), true);
-                clients.add(out);
 
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 String input;
@@ -50,19 +50,28 @@ public class WhiteboardServer {
                         out.println("Invalid PIN! You cannot join.");
                         return;  // Exit if the PIN is invalid
                     }
+
+                    // Add the client to the correct group based on the PIN
+                    groups.computeIfAbsent(pin, k -> new CopyOnWriteArraySet<>()).add(out);
                 }
 
                 // Handle drawing data
                 while ((input = in.readLine()) != null) {
                     System.out.println("Received: " + input);
-                    for (PrintWriter client : clients) {
+                    // Broadcast the message only to clients in the same group (PIN)
+                    for (PrintWriter client : groups.get(pin)) {
                         client.println(input);
                     }
                 }
             } catch (IOException e) {
                 System.out.println("Client disconnected: " + e.getMessage());
             } finally {
-                clients.remove(out);
+                if (groups.containsKey(pin)) {
+                    groups.get(pin).remove(out);
+                    if (groups.get(pin).isEmpty()) {
+                        groups.remove(pin);  // Clean up the group if no clients are left
+                    }
+                }
                 try {
                     socket.close();
                 } catch (IOException e) {

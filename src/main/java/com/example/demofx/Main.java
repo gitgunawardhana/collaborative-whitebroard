@@ -200,7 +200,7 @@ public class Main extends Application {
 
         if (mode.equals("highlight")) {
             Color highlightColor = Color.YELLOW; // Change this to your desired highlight color
-            gc.setFill(highlightColor.deriveColor(0, 1, 1, 0.05)); // Semi-transparent color
+            gc.setFill(highlightColor.deriveColor(0, 1, 1, 0.05)); // Transparent color
             gc.fillRect(x - 10, y - 10, 20, 20); // Draw a rectangle as the highlight
         } else if (mode.equals("erase")) {
             gc.setStroke(Color.WHITE);  // Use white for erasing
