@@ -64,33 +64,39 @@ public class Main extends Application {
 
         // Add event listeners for drawing
         canvas.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+            double lineWidth = isEraserMode ? 10.0 : 1.0;  // Set line width based on mode
+            String mode = isHighlightMode ? "highlight" : (isEraserMode ? "erase" : "normal");
+
             if (isHighlightMode) {
                 drawHighlight(e.getX(), e.getY());
             } else if (isEraserMode){
                 gc.beginPath();
                 gc.moveTo(e.getX(), e.getY());
                 gc.stroke();
-                gc.setLineWidth(10.0);
-                sendDrawingData(e.getX(), e.getY(), "pressed", Color.WHITE);
-            }else {
+                gc.setLineWidth(lineWidth);
+                sendDrawingData(e.getX(), e.getY(), "pressed", Color.WHITE, lineWidth, mode);
+            } else {
                 gc.beginPath();
                 gc.moveTo(e.getX(), e.getY());
                 gc.stroke();
-                gc.setLineWidth(1.0);
-                sendDrawingData(e.getX(), e.getY(), "pressed", currentColor);
+                gc.setLineWidth(lineWidth);
+                sendDrawingData(e.getX(), e.getY(), "pressed", currentColor, lineWidth, mode);
             }
         });
 
         canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
+            double lineWidth = isEraserMode ? 10.0 : 1.0;  // Set line width based on mode
+            String mode = isHighlightMode ? "highlight" : (isEraserMode ? "erase" : "normal");
+
             if (isHighlightMode) {
                 drawHighlight(e.getX(), e.getY());
-            } else if (isEraserMode){
+            } else if (isEraserMode) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastDrawTime >= drawDelay) {
                     gc.lineTo(e.getX(), e.getY());
                     gc.stroke();
-                    gc.setLineWidth(10.0);
-                    sendDrawingData(e.getX(), e.getY(), "dragged", Color.WHITE);
+                    gc.setLineWidth(lineWidth);
+                    sendDrawingData(e.getX(), e.getY(), "dragged", Color.WHITE, lineWidth, mode);
                     lastDrawTime = currentTime;
                 }
             } else {
@@ -98,14 +104,13 @@ public class Main extends Application {
                 if (currentTime - lastDrawTime >= drawDelay) {
                     gc.lineTo(e.getX(), e.getY());
                     gc.stroke();
-                    gc.setLineWidth(1.0);
-                    sendDrawingData(e.getX(), e.getY(), "dragged", currentColor);
+                    gc.setLineWidth(lineWidth);
+                    sendDrawingData(e.getX(), e.getY(), "dragged", currentColor, lineWidth, mode);
                     lastDrawTime = currentTime;
                 }
-
-
             }
         });
+
 
         ToggleButton eraserButton = new ToggleButton("Eraser");
         eraserButton.setOnAction(e -> {
@@ -143,20 +148,34 @@ public class Main extends Application {
         Color highlightColor = Color.YELLOW; // Change this to your desired highlight color
         gc.setFill(highlightColor.deriveColor(0, 1, 1, 0.05)); // Semi-transparent color
         gc.fillRect(x - 10, y - 10, 20, 20); // Draw a rectangle as the highlight
-    }
 
-    private void sendDrawingData(double x, double y, String action, Color color) {
-        int red = (int) (color.getRed() * 255);
-        int green = (int) (color.getGreen() * 255);
-        int blue = (int) (color.getBlue() * 255);
-        String data = action + "," + x + "," + y + "," + red + "," + green + "," + blue;
+        // Prepare the data string in the required format
+        int red = (int) (highlightColor.getRed() * 255);
+        int green = (int) (highlightColor.getGreen() * 255);
+        int blue = (int) (highlightColor.getBlue() * 255);
+        int lineWidth = 0; // Set to your desired line width or modify as needed
+        String mode = "highlight"; // Mode for the highlight
+
+        // Create the data string
+        String data = mode + "," + x + "," + y + "," + red + "," + green + "," + blue + "," + lineWidth + "," + mode;
+
+        // Send drawing data to the server
         client.sendDrawingData(data);
     }
 
+    private void sendDrawingData(double x, double y, String action, Color color, double lineWidth, String mode) {
+        int red = (int) (color.getRed() * 255);
+        int green = (int) (color.getGreen() * 255);
+        int blue = (int) (color.getBlue() * 255);
+        String data = action + "," + x + "," + y + "," + red + "," + green + "," + blue + "," + lineWidth + "," + mode;
+        client.sendDrawingData(data);
+    }
+
+
     public static void receiveDrawingData(String data) {
         String[] parts = data.split(",");
-        // Check if there are enough parts in the data to proceed
-        if (parts.length < 6) {
+        // Ensure we have enough parts in the data to proceed
+        if (parts.length < 8) {
             System.out.println("Received invalid data: " + data);
             return;  // Exit early if data is not valid
         }
@@ -167,6 +186,8 @@ public class Main extends Application {
         int red = Integer.parseInt(parts[3]);
         int green = Integer.parseInt(parts[4]);
         int blue = Integer.parseInt(parts[5]);
+        double lineWidth = Double.parseDouble(parts[6]);
+        String mode = parts[7];  // Get the mode
 
         if (x < 0 || y < 0 || x > 800 || y > 600) {
             System.out.println("Invalid coordinates received: " + x + ", " + y);
@@ -175,6 +196,17 @@ public class Main extends Application {
 
         Color color = Color.rgb(red, green, blue);
         gc.setStroke(color);
+        gc.setLineWidth(lineWidth);  // Set line width
+
+        if (mode.equals("highlight")) {
+            Color highlightColor = Color.YELLOW; // Change this to your desired highlight color
+            gc.setFill(highlightColor.deriveColor(0, 1, 1, 0.05)); // Semi-transparent color
+            gc.fillRect(x - 10, y - 10, 20, 20); // Draw a rectangle as the highlight
+        } else if (mode.equals("erase")) {
+            gc.setStroke(Color.WHITE);  // Use white for erasing
+        } else {
+            gc.setStroke(color);
+        }
 
         if (action.equals("pressed")) {
             gc.beginPath();
@@ -185,6 +217,7 @@ public class Main extends Application {
             gc.stroke();
         }
     }
+
 
     public static void main(String[] args) {
         launch(args);
