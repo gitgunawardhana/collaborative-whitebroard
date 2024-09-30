@@ -10,11 +10,16 @@ public class WhiteboardClient {
     private PrintWriter out;
     private BufferedReader in;
 
-    public WhiteboardClient(String serverAddress) throws IOException {
+    public WhiteboardClient(String serverAddress, String pin) throws IOException {
         socket = new Socket(serverAddress, 12345);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        sendPin(pin);  // Send the PIN to the server
         listenForDrawingData();  // Start listening for incoming drawing data
+    }
+
+    private void sendPin(String pin) {
+        out.println(pin);  // Send the PIN to the server
     }
 
     public void sendDrawingData(String data) {
@@ -26,10 +31,7 @@ public class WhiteboardClient {
             try {
                 String input;
                 while ((input = in.readLine()) != null) {
-                    // Make a final copy of the input variable
                     String finalInput = input;  // Create a final copy
-
-                    // Notify the Main class about new drawing data
                     Platform.runLater(() -> Main.receiveDrawingData(finalInput));  // Use the final copy
                 }
             } catch (IOException e) {
