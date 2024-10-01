@@ -1,6 +1,7 @@
 # Collaborative Whiteboard
 
 This is a collaborative whiteboard application that allows multiple users to draw and interact with each other in real-time. The application is built using JavaFX for the frontend and Java sockets for the backend to manage client-server communication. Users can join a session using a unique PIN, enabling them to share and collaborate on a whiteboard.
+![collaborative-whiteboard](https://github.com/user-attachments/assets/c27bc3e0-5296-498a-bf7d-8f75d0123759)
 
 ## Features
 
